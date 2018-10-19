@@ -10,4 +10,6 @@
 
 @interface QMCustomAction : QMAction
 
+@property (nonatomic, strong) id target;
+
 @end

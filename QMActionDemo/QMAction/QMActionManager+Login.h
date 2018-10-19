@@ -12,6 +12,8 @@
 
 - (BOOL)shouldPerformLoginBeforeAction:(QMAction *)action;
 
-- (void)performAction:(QMAction *)action afterLogin:(void (^)())completion;
+- (void)performLoginWithAction:(QMAction *)action completion:(void (^)(BOOL))completion;
+
+- (BOOL)isLoginParamMatchWithParams:(NSDictionary*)params;
 
 @end

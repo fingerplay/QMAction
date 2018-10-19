@@ -7,26 +7,46 @@
 //
 
 #import "QMActionConfig.h"
-#import "QMJSONManager.h"
 
 @implementation QMActionConfig
 
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _classMapCache = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
 
-- (Class)actionSubClassForType:(QMActionType)type {
+- (Class)actionSubClassForType:(QMActionType)type module:(NSString*)module{
+    if ([module isEqualToString:ACTION_MODULE_HOME]) {
+        return [QMCustomAction class];
+    }
     
+
     return [QMPushAction class];
 }
 
 
 - (BOOL)isNeedLogin:(QMAction*)action {
+    return NO;
+}
+
+- (NSString*)cacheMapKeyForAction:(QMAction*)action {
+    NSString *key;
+    if (action.subtype) {
+        key = [NSString stringWithFormat:@"%@_%ld_%ld",action.module,(long)action.type, (long)action.subtype];
+    }else{
+        key = [NSString stringWithFormat:@"%@_%ld",action.module,(long)action.type];
+    }
     
-    return NO;
+    return key;
 }
 
-- (BOOL)isNeedRecordToDB:(QMAction*)action {
-
-    return NO;
+- (void)registerClass:(Class<QMActionProtocol>)cls forAction:(QMAction *)action {
+    if (cls && action) {
+        [_classMapCache setObject:cls forKey:[self cacheMapKeyForAction:action]];
+    }
 }
-
 
 @end

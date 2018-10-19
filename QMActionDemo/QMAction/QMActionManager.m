@@ -2,8 +2,8 @@
 //  QMAction.m
 //  juanpi3
 //
-//  Created by songbiao on 15-3-12.
-//  Copyright (c) 2015年 songbiao. All rights reserved.
+//  Created by luojin on 15-3-12.
+//  Copyright (c) 2015年 luojin. All rights reserved.
 //
 
 #import "QMActionManager.h"
@@ -12,12 +12,12 @@
 #import "QMActionManager+Login.h"
 #import "QMActionConfig.h"
 #import "NSArray+safe.h"
+#import "AppDelegate.h"
 
-//H5跳转交互，业务：http://wiki.juanpi.org/pages/viewpage.action?pageId=3703108
 
 @interface QMActionManager ()
 @property (nonatomic, strong) NSArray *actionClasses;
-@property (nonatomic, strong) NSCache *classMapCache;
+
 
 @end
 
@@ -37,24 +37,26 @@ QMActionManager *_sharedInstance = nil;
     if (self) {
         //动态获取所有遵循了QMActionProtocol的类
         _actionClasses = [QMRuntimeHelper getClassesThatConfirmToProtocol:@protocol(QMActionProtocol)];
-        _classMapCache = [[NSCache alloc] init];
         QMActionConfig *config = [[QMActionConfig alloc] init];
         _config = config;
     }
     return self;
 }
 
-- (BOOL)performAction:(QMAction *)action {
+- (void)performAction:(QMAction *)action {
+    [self performAction:action withSuccess:nil failed:nil];
+}
+
+- (void)performAction:(QMAction *)action withSuccess:(QMActionPerformSuccessBlock)succBlock failed:(QMActionPerformFailBlock)failBlock {
+    action.succBlock = succBlock;
+    action.failBlock = failBlock;
     
     if (!action) {
         NSCAssert(NO, @"action为null!");
-        return NO;
-    }
-    
-    NSInteger indexType = action.type;
-    if (!indexType) {
-        NSCAssert(NO, @"type为0!");
-        return NO;
+        if (failBlock) {
+            failBlock(QMActionParamError,nil);
+        }
+        return;
     }
     
     //注意decode只能执行一次，统一放在外面执行
@@ -66,37 +68,44 @@ QMActionManager *_sharedInstance = nil;
         action.content = jump_content;
     }
     
-    
-    //检查登录状态，如果没有登录，就先登录
-    if([self shouldPerformLoginBeforeAction:action]) {
-        __weak typeof(self) wSelf = self;
-        [wSelf performAction:action afterLogin:^{
-            __strong typeof(self) sSelf = self;
-            Class actionClass = [sSelf findClassForAction:action];
-            if (actionClass) {
-                [sSelf performAction:action withClass:actionClass];
+    __weak typeof(self) weakself = self;
+    dispatch_main_async_safe(^(){
+        [self checkLoginStatusBeforeAction:action completion:^(BOOL succ) {
+            __strong typeof(self) strongself = weakself;
+            if (succ) {
+                Class<QMActionProtocol> actionClass = [self findClassForAction:action];
+                if (actionClass) {
+                    [strongself.config registerClass:actionClass forAction:action];
+                    
+                    [self performAction:action withClass:actionClass success:succBlock failed:failBlock];
+                    
+                } else {
+                    if (failBlock) {
+                        failBlock(QMActionClassNotFound,nil);
+                    }
+                }
+            }else{
+                if (failBlock) {
+                    failBlock(QMActionParamNotMatchError,nil);
+                }
             }
         }];
-        return NO;
-    } else {
-        Class actionClass = [self findClassForAction:action];
-        if (actionClass) {
-            [self performAction:action withClass:actionClass];
-            return YES;
-        } else {
-            return NO;
+    });
+
+}
+
+- (void)getTargetForAction:(QMAction *)action completion:(QMActionGetTargetBlock)block{
+    Class<QMActionProtocol> actionClass = [self findClassForAction:action];
+    [self getTargetForAction:action withClass:actionClass completion:^(id target, BOOL isCreated) {
+        if (block) {
+            block(target,isCreated);
         }
-    }
+    }];
 }
 
-- (id)createTargetForAction:(QMAction *)action {
-    Class actionClass = [self findClassForAction:action];
-    id target = [self createTargetForAction:action withClass:actionClass];
-    return target;
-}
-
-- (Class)findClassForAction:(QMAction *)action {
-    Class cacheClass = [self.classMapCache objectForKey:@(action.type)];
+- (Class<QMActionProtocol>)findClassForAction:(QMAction *)action {
+    NSString *key = [self.config cacheMapKeyForAction:action];
+    Class cacheClass = [self.config.classMapCache objectForKey:key];
     if (cacheClass) {
         //已经缓存的类型，可以直接跳转
         return cacheClass;
@@ -104,89 +113,186 @@ QMActionManager *_sharedInstance = nil;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wobjc-method-access"
         //未缓存的，先判断该种类型的跳转能被哪个类响应,并缓存下来，再执行跳转
+        Class<QMActionProtocol> responseClass = nil;
         for (Class<QMActionProtocol> actionClass in self.actionClasses) {
-            BOOL canHandle = [actionClass performSelector:@selector(canHandleAction:) withObject:action];
+            BOOL canHandle = NO;
+            if ([actionClass respondsToSelector:@selector(canHandleAction:)]) {
+                canHandle = [actionClass canHandleAction:action];
+            }
+           
             if (canHandle) {
-                [self.classMapCache setObject:actionClass forKey:@(action.type)];
-                return actionClass;
+                responseClass = actionClass;
+                break;
             }
         }
+        //如果某个类被动态指定为该action对应的类，则以动态注册的为准
+        return responseClass;
 #pragma clang diagnostic pop
     }
     return nil;
 }
 
-
-- (BOOL)performAction:(QMAction *)action withClass:(Class)actionClass {
-    //创建视图控制器，并对其属性进行赋值
-    id target = [self createTargetForAction:action withClass:actionClass];
-
-    //处理各个页面特殊的操作,CustomAction必须要实现此方法
-    if ([actionClass respondsToSelector:@selector(handleAction:withHandler:)]) {
-        [actionClass performSelector:@selector(handleAction:withHandler:) withObject:action withObject:target];
+- (void)checkLoginStatusBeforeAction:(QMAction *)action completion:(void (^)(BOOL))completion {
+    //检查登录状态，如果没有登录，就先登录
+    if ([self shouldPerformLoginBeforeAction:action]) {
+        [self performLoginWithAction:action completion:^(BOOL succ) {
+            if (completion) {
+                completion(succ);
+            }
+        }];
+    }else if (![self isLoginParamMatchWithParams:action.loginParam]) {
+        if (completion) {
+            completion(NO);
+        }
+    }else{
+        if (completion) {
+            completion(YES);
+        }
     }
-    
-    //执行跳转
-    if (target && [target isKindOfClass:[UIViewController class]] && [action isKindOfClass:[QMPushAction class]]) {
-        return [self performPushAction:(QMPushAction *)action withViewController:target];
-    }
-    return YES;
 }
 
-- (id)createTargetForAction:(QMAction *)action withClass:(Class)actionClass{
-    
-    
-    id result;
-    //创建页面
-    if ([actionClass respondsToSelector:@selector(createViewControllerWithAction:)]) {
-        result = [actionClass performSelector:@selector(createViewControllerWithAction:) withObject:action];
 
-    }
-    //没有实现createViewControllerWithAction：方法的，默认创建一个viewController（注意父类有没有实现createViewController方法）
-    else if ([actionClass isSubclassOfClass:[UIViewController class]]) {
-        result = [[actionClass alloc] init];
-    }
-    
-    if (result){
-        [action setValuesForObject:result];
-    }
-    
-    return result;
+- (void)performAction:(QMAction *)action withClass:(Class<QMActionProtocol>)actionClass success:(QMActionPerformSuccessBlock)succBlock failed:(QMActionPerformFailBlock)failBlock {
+
+    //获取视图控制器，并对其属性进行赋值
+    dispatch_main_async_safe(^(){
+        [self getTargetForAction:action withClass:actionClass completion:^void(id target, BOOL isCreated) {
+            if (!target) {
+                if (failBlock) {
+                    failBlock(QMActionTargetNotFound,nil);
+                }
+                return;
+            }
+            
+            //当页面再次出现的时候做一些操作
+            if (!isCreated && [target respondsToSelector:@selector(viewAppearOnceAgainWithAction:)]) {
+                [target performSelector:@selector(viewAppearOnceAgainWithAction:) withObject:action];
+            }
+            
+            
+            [action setValuesForObject:target];
+            
+            //处理各个页面特殊的操作,CustomAction必须要实现此方法
+            if ([actionClass respondsToSelector:@selector(handleAction:withHandler:)]) {
+                BOOL businessSucc = [actionClass handleAction:action withHandler:target];
+                if (!businessSucc && failBlock) {
+                    failBlock(QMActionHandleError,nil);
+                }
+            }
+            
+            //执行跳转
+            if ([target isKindOfClass:[UIViewController class]] && [action isKindOfClass:[QMPushAction class]]) {
+                [self performPushAction:(QMPushAction *)action withViewController:target success:succBlock failed:failBlock];
+            }else {
+                if (succBlock) {
+                    succBlock(target,nil);
+                }
+            }
+        }];
+    });
 }
 
-- (BOOL)performPushAction:(QMPushAction*)action withViewController:(UIViewController *)publicVC {
+- (void)getTargetForAction:(QMAction *)action withClass:(Class<QMActionProtocol>)actionClass completion:(QMActionGetTargetBlock)block{
+    BOOL shouldCreate = YES;
+    id target = nil;
+
+    if ([action isKindOfClass:[QMCustomAction class]]) {
+        target = ((QMCustomAction*)action).target;
+        if (target && block) {
+            block(target, NO);
+            return;
+        }
+    }
+    
+    if ([actionClass respondsToSelector:@selector(shouldCreateTargetWithAction:)]) {
+        shouldCreate = [actionClass shouldCreateTargetWithAction:action];
+    }
+    
+    if (shouldCreate) {
+        //创建页面
+        if ([actionClass respondsToSelector:@selector(createTargetWithAction:)]) {
+            target = [actionClass performSelector:@selector(createTargetWithAction:) withObject:action];
+            
+        }
+    }else {
+        //获取一个共享的实例
+        if ([actionClass respondsToSelector:@selector(sharedTargetForAction:)]) {
+            target = [actionClass performSelector:@selector(sharedTargetForAction:) withObject:actionClass];
+        }
+
+    }
+    
+    if (block) {
+        block(target,shouldCreate);
+    }
+}
+
+- (void)performPushAction:(QMPushAction*)action withViewController:(UIViewController *)publicVC success:(QMActionPerformSuccessBlock)succBlock failed:(QMActionPerformFailBlock)failBlock {
     if (!action.jumpController && [action isKindOfClass:[QMPushAction class]]) {
+        //默认为根视图导航栏
         NSCAssert(NO, @"必须设置一个jumpController");
-//        action.jumpController =  [QMAppUtils currentNavController];
+        if (failBlock) {
+            failBlock(QMActionParamError,nil);
+        }
+        return;
     }
+    NSLog(@"action transitionType:%@",action.transitionStyle);
     //present方式
     if (action.transitionStyle.integerValue == TransitionStylePresentWithoutNavigationBar) {
-        [action.jumpController presentViewController:publicVC animated:YES completion:nil];
+        //先把alertView关闭再弹出新的页面，否则无法弹出
+        if ([action.jumpController.presentedViewController isKindOfClass:[UIAlertController class]]) {
+            [action.jumpController dismissViewControllerAnimated:YES completion:^{
+                [action.jumpController presentViewController:publicVC animated:YES completion:^{
+                    if (succBlock) {
+                        succBlock(publicVC,nil);
+                    }
+                }];
+            }];
+        }else {
+            [action.jumpController presentViewController:publicVC animated:YES completion:^{
+                if (succBlock) {
+                    succBlock(publicVC,nil);
+                }
+            }];
+        }
     }
     else if (action.transitionStyle.integerValue == TransitionStylePresent) {
         UIViewController *prestingController = action.jumpController;
-        UINavigationController *baseNC = [[UINavigationController alloc] initWithRootViewController:publicVC];
-        [prestingController presentViewController:baseNC animated:YES completion:nil];
+        
+        if ([action.jumpController.presentedViewController isKindOfClass:[UIAlertController class]]) {
+            [action.jumpController dismissViewControllerAnimated:YES completion:^{
+                UINavigationController *baseNC = [[UINavigationController alloc] initWithRootViewController:publicVC];
+                [prestingController presentViewController:baseNC animated:YES completion:^{
+                    if (succBlock) {
+                        succBlock(publicVC,nil);
+                    }
+                }];
+            }];
+        }else{
+            UINavigationController *baseNC = [[UINavigationController alloc] initWithRootViewController:publicVC];
+            [prestingController presentViewController:baseNC animated:YES completion:^{
+                if (succBlock) {
+                    succBlock(publicVC,nil);
+                }
+            }];
+        }
+        
     }
     //push或pop方式
     else if ([action.jumpController isKindOfClass:[UINavigationController class]]) {
         UINavigationController *navControl = (UINavigationController *)action.jumpController;
-        //导航栏跟随页面跳转，例如首页浮窗跳转到个人中心
-        if (action.transitionStyle.integerValue == TransitionStyleNavigationPush) {
-            if ([navControl.topViewController isKindOfClass:[UIViewController class]]) {
-                [navControl pushViewController:publicVC animated:YES];
-            } else {
-                return NO;
-            }
-        }
-        
         //普通推入跳转
-        else if(action.transitionStyle.integerValue == TransitionStyleNormalPush){
+        if(action.transitionStyle.integerValue == TransitionStyleNormalPush){
             //防止重复打开同一个页面
             if ([navControl.topViewController isKindOfClass:[UIViewController class]]) {
                 [navControl pushViewController:publicVC animated:YES];
+                if (succBlock) {
+                    succBlock(publicVC,nil);
+                }
             }else {
-                return NO;
+                if (failBlock) {
+                    failBlock(QMActionParamError,nil);
+                }
             }
         }
         //弹回到某一页或者推入
@@ -195,15 +301,20 @@ QMActionManager *_sharedInstance = nil;
             for (NSInteger i = navControl.viewControllers.count - 2; i >=0; i--) {
                 UIViewController *vc = [navControl.viewControllers objectAtIndex:i];
                 if ([vc isKindOfClass:[publicVC class]] && [vc respondsToSelector:@selector(canPopFromViewController:withAction:)] ) {
-                    BOOL canPop = [vc performSelector:@selector(canPopFromViewController:withAction:) withObject:lastVC withObject:action];
+                    BOOL canPop = [(id<QMActionProtocol>)vc canPopFromViewController:lastVC withAction:action];
                     if (canPop) {
                         [navControl popToViewController:vc animated:YES];
-                        return YES;
+                        if (succBlock) {
+                            succBlock(publicVC,nil);
+                        }
                     }
                   
                 } else if ([vc isKindOfClass:[publicVC class]]) {
+                    [action setValuesForObject:vc];
                     [navControl popToViewController:vc animated:YES];
-                    return YES;
+                    if (succBlock) {
+                        succBlock(publicVC,nil);
+                    }
                 }
             }
             
@@ -223,38 +334,56 @@ QMActionManager *_sharedInstance = nil;
                 sec = sec + (navCount - maxCount) * psec;
             }
             [navControl popToRootViewControllerAnimated:NO];
-//            [QMLoadView showToView:[[UIApplication sharedApplication] delegate].window.rootViewController.view animated:YES];
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(sec * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-//               [QMLoadView hideForView:[[UIApplication sharedApplication] delegate].window.rootViewController.view animated:YES];
                [navControl pushViewController:publicVC animated:YES];
-            });
-        }else if (action.transitionStyle.integerValue == TransitionStylePopOrPushIsExist){
-            for (NSInteger i = navControl.viewControllers.count - 2; i >=0; i--) {
-                UIViewController *vc = [navControl.viewControllers objectAtIndex:i];
-                if ([vc isKindOfClass:[publicVC class]] && [vc respondsToSelector:@selector(canPopFromViewController:withAction:)] ) {
-                    BOOL canPop = [vc performSelector:@selector(canPopFromViewController:withAction:) withObject:vc withObject:action];
-                    if (canPop) {
-                        [navControl popToViewController:vc animated:YES];
-                        return YES;
-                    }
-                    
-                } else if ([vc isKindOfClass:[publicVC class]]) {
-                    [navControl popToViewController:vc animated:YES];
-                    [action setValuesForObject:vc];
-                    return YES;
+                if (succBlock) {
+                    succBlock(publicVC,nil);
                 }
+            });
+        }else if (action.transitionStyle.integerValue == TransitionStylePopToHomeAndPresent) {
+            //默认跳转延时
+            float sec =  1.3;
+            //当导航栏大于6个控制器时  控制器单个移除延时。
+            float psec = 0.15;
+            
+            NSInteger maxCount = 6;
+            NSInteger navCount = [navControl.viewControllers count];
+            
+            if (navCount > maxCount) {
+                sec = sec + (navCount - maxCount) * psec;
             }
-            
-            [navControl pushViewController:publicVC animated:YES];
-            
+            [navControl popToRootViewControllerAnimated:NO];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(sec * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                
+                if ([action.jumpController.presentedViewController isKindOfClass:[UIAlertController class]]) {
+                    [action.jumpController dismissViewControllerAnimated:YES completion:^{
+                        UINavigationController *baseNC = [[UINavigationController alloc] initWithRootViewController:publicVC];
+                        [navControl presentViewController:baseNC animated:YES completion:^{
+                            if (succBlock) {
+                                succBlock(publicVC,nil);
+                            }
+                        }];
+                    }];
+                }else{
+                    UINavigationController *baseNC = [[UINavigationController alloc] initWithRootViewController:publicVC];
+                    [navControl presentViewController:baseNC animated:YES completion:^{
+                        if (succBlock) {
+                            succBlock(publicVC,nil);
+                        }
+                    }];
+                }
+                
+            });
         }
+        
     }
     //其他不支持类型
     else {
         NSCAssert(NO, @"不支持该类型的跳转!");
-        return NO;
+        if (failBlock) {
+            failBlock(QMActionParamError,nil);
+        }
     }
-    return YES;
 }
 
 

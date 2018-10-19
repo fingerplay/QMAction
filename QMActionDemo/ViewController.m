@@ -33,7 +33,7 @@
 
 -(void)jumpBtnClick:(id)sender {
     NSString *param = [QMJSONManager JSONStringFromObject:@{@"url":@"https://m.juanpi.com"}];
-    QMAction *action = [QMAction actionWithType:QMActionTypeDefaultWebVC content:param jumpController:self.navigationController];
+    QMAction *action = [QMAction actionWithType:QMActionTypeDefaultWebVC module:ACTION_MODULE_NORMAL content:param jumpController:self.navigationController];
     [[QMActionManager sharedManager] performAction:action];
     
 }

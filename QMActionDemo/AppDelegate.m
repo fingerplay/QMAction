@@ -8,6 +8,8 @@
 
 #import "AppDelegate.h"
 #import "ViewController.h"
+#import "QMActionManager.h"
+
 @interface AppDelegate ()
 
 @end
@@ -24,6 +26,37 @@
     return YES;
 }
 
+
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+    NSLog(@"openURL");
+    //在没有presentedViewController的情况下，这里可以取self.window.rootViewController作为跳转控制器
+    UIViewController *jumpController = self.window.rootViewController;
+    if (jumpController.presentedViewController) {
+        jumpController = jumpController.presentedViewController;
+    }
+    QMAction *action = [QMAction actionFromUrl:url.absoluteString jumpController:jumpController];
+    if ([[QMActionManager sharedManager] findClassForAction:action]) {
+        [[QMActionManager sharedManager] performAction:action withSuccess:^(id target,NSDictionary *userInfo) {
+            if (target) {
+                QMAction *nextAction = [QMAction actionFromUrl:action.succUrl jumpController:jumpController];
+                if (nextAction) {
+                    [[QMActionManager sharedManager] performAction:nextAction];
+                }
+                
+            }
+        } failed:^(QMActionErrorCode errorCode, NSDictionary *userInfo) {
+            NSLog(@"error:%ld, url:%@",(long)errorCode,url.absoluteString);
+            if (action.failUrl) {
+                QMAction *nextAction = [QMAction actionFromUrl:action.failUrl jumpController:jumpController];
+                if (nextAction) {
+                    [[QMActionManager sharedManager] performAction:nextAction];
+                }
+            }
+        }];
+        return YES;
+    }
+    return NO;
+}
 
 - (void)applicationWillResignActive:(UIApplication *)application {
     // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.

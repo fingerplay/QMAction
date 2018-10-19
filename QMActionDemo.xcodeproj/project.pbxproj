@@ -16,7 +16,6 @@
 		AF4D13361F0B98C300423E92 /* QMRuntimeHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = AF4D13351F0B98C300423E92 /* QMRuntimeHelper.m */; };
 		AF4D13391F0B98F600423E92 /* QMJSONManager.m in Sources */ = {isa = PBXBuildFile; fileRef = AF4D13381F0B98F600423E92 /* QMJSONManager.m */; };
 		AF4D133C1F0B991C00423E92 /* NSString+QMHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = AF4D133B1F0B991C00423E92 /* NSString+QMHelper.m */; };
-		AF4D13421F0B9CDD00423E92 /* UIViewController+QMAction.m in Sources */ = {isa = PBXBuildFile; fileRef = AF4D13411F0B9CDD00423E92 /* UIViewController+QMAction.m */; };
 		AF4D13451F0B9F4B00423E92 /* QMDefaultWebVC.m in Sources */ = {isa = PBXBuildFile; fileRef = AF4D13441F0B9F4B00423E92 /* QMDefaultWebVC.m */; };
 		AF96CDF71F42E32E00077132 /* QMAction.m in Sources */ = {isa = PBXBuildFile; fileRef = AF96CDE81F42E32E00077132 /* QMAction.m */; };
 		AF96CDF81F42E32E00077132 /* QMActionConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = AF96CDEA1F42E32E00077132 /* QMActionConfig.m */; };
@@ -45,8 +44,6 @@
 		AF4D13381F0B98F600423E92 /* QMJSONManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = QMJSONManager.m; sourceTree = "<group>"; };
 		AF4D133A1F0B991C00423E92 /* NSString+QMHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+QMHelper.h"; sourceTree = "<group>"; };
 		AF4D133B1F0B991C00423E92 /* NSString+QMHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+QMHelper.m"; sourceTree = "<group>"; };
-		AF4D13401F0B9CDD00423E92 /* UIViewController+QMAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "UIViewController+QMAction.h"; path = "QMActionDemo/QMAction/UIViewController+QMAction.h"; sourceTree = SOURCE_ROOT; };
-		AF4D13411F0B9CDD00423E92 /* UIViewController+QMAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "UIViewController+QMAction.m"; path = "QMActionDemo/QMAction/UIViewController+QMAction.m"; sourceTree = SOURCE_ROOT; };
 		AF4D13431F0B9F4B00423E92 /* QMDefaultWebVC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QMDefaultWebVC.h; sourceTree = "<group>"; };
 		AF4D13441F0B9F4B00423E92 /* QMDefaultWebVC.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = QMDefaultWebVC.m; sourceTree = "<group>"; };
 		AF96CDE71F42E32E00077132 /* QMAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QMAction.h; sourceTree = "<group>"; };
@@ -67,6 +64,7 @@
 		AF96CDF61F42E32E00077132 /* UIViewController+QMAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIViewController+QMAction.m"; sourceTree = "<group>"; };
 		AF96CDFE1F42E3B500077132 /* NSArray+safe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSArray+safe.h"; sourceTree = "<group>"; };
 		AF96CDFF1F42E3B500077132 /* NSArray+safe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSArray+safe.m"; sourceTree = "<group>"; };
+		AFA0FF842179C2B2002A90DB /* SHMacroDefine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SHMacroDefine.h; path = QMActionDemo/Utils/SHMacroDefine.h; sourceTree = SOURCE_ROOT; };
 		AFDE21A41F1E393E008B350F /* UIView+Extension.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "UIView+Extension.m"; sourceTree = "<group>"; };
 		AFDE21A51F1E393E008B350F /* UIView+Extension.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UIView+Extension.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -129,6 +127,7 @@
 		AF4D13331F0B98C300423E92 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				AFA0FF842179C2B2002A90DB /* SHMacroDefine.h */,
 				AF96CDFE1F42E3B500077132 /* NSArray+safe.h */,
 				AF96CDFF1F42E3B500077132 /* NSArray+safe.m */,
 				AF4D13371F0B98F600423E92 /* QMJSONManager.h */,
@@ -139,8 +138,6 @@
 				AF4D133B1F0B991C00423E92 /* NSString+QMHelper.m */,
 				AFDE21A51F1E393E008B350F /* UIView+Extension.h */,
 				AFDE21A41F1E393E008B350F /* UIView+Extension.m */,
-				AF4D13401F0B9CDD00423E92 /* UIViewController+QMAction.h */,
-				AF4D13411F0B9CDD00423E92 /* UIViewController+QMAction.m */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -199,7 +196,7 @@
 				TargetAttributes = {
 					AF4D13061F0B977F00423E92 = {
 						CreatedOnToolsVersion = 8.3.3;
-						DevelopmentTeam = J73LD2LF7M;
+						DevelopmentTeam = 672MJLD28K;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -251,7 +248,6 @@
 				AF96CDFC1F42E32E00077132 /* QMPushAction.m in Sources */,
 				AF96CDFA1F42E32E00077132 /* QMActionManager.m in Sources */,
 				AF4D130C1F0B977F00423E92 /* main.m in Sources */,
-				AF4D13421F0B9CDD00423E92 /* UIViewController+QMAction.m in Sources */,
 				AF96CDF71F42E32E00077132 /* QMAction.m in Sources */,
 				AF96CDFD1F42E32E00077132 /* UIViewController+QMAction.m in Sources */,
 				AF96CDFB1F42E32E00077132 /* QMCustomAction.m in Sources */,
@@ -375,7 +371,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = J73LD2LF7M;
+				DEVELOPMENT_TEAM = 672MJLD28K;
 				INFOPLIST_FILE = QMActionDemo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.juanpi.QMActionDemo;
@@ -387,7 +383,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = J73LD2LF7M;
+				DEVELOPMENT_TEAM = 672MJLD28K;
 				INFOPLIST_FILE = QMActionDemo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.juanpi.QMActionDemo;

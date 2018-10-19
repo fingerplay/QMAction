@@ -9,6 +9,7 @@
 #import "QMDefaultWebVC.h"
 #import "QMActionManager.h"
 #import "UIView+Extension.h"
+#import "QMJSONManager.h"
 
 @interface QMDefaultWebVC() <QMActionProtocol,UIWebViewDelegate>
 /**
@@ -147,7 +148,7 @@
         return NO;
     }
     
-    if ([urlString rangeOfString:QIMI_SCHEME].location!=NSNotFound){
+    if ([urlString rangeOfString:ACTION_SCHEME].location!=NSNotFound){
         [self handleQimiAction:urlString];
         return NO;
     }
@@ -190,7 +191,7 @@
     return NO;
 }
 
-+ (id)createViewControllerWithAction:(QMAction *)action {
++ (id)createTargetWithAction:(QMAction *)action {
     NSInteger type = action.type;
   
     if (type != QMActionTypeDefaultWebVC) {

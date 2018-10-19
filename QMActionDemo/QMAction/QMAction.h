@@ -10,24 +10,27 @@
 #import "QMActionDefine.h"
 
 
-typedef NS_ENUM(NSInteger,QMActionSourceType) {
-    QMActionSourceTypeDefault = 0, //本地唤起
-    QMActionSourceTypeWebView,  //webview页面唤起
-    QMActionSourceTypeRemoteNotification,  //推送消息唤起
-    QMActionSourceTypeLocalNotification,  //本地消息唤起
-    QMActionSourceTypeOutsideApp, //外部APP唤起,包括safari
-    QMActionSourceTypeNetworkResponse, //网络请求结果唤起
-};
 
-/**
- *  跳转重构指引：http://192.168.16.8:8090/pages/viewpage.action?pageId=37322820
- */
 
 @interface QMAction : NSObject
+
+/**
+ *  跳转模块，必填项
+ */
+@property (nonatomic, strong) NSString *module;
+
 /**
  *  跳转类型，必填项
  */
 @property (nonatomic, assign) QMActionType type;
+
+
+/**
+ *  子类型,非必填
+ */
+@property (nonatomic, assign) NSInteger subtype;
+
+
 /**
  *  跳转的content参数，对于web页面来说是跳转的url，对于一般页面来说是参数
  */
@@ -56,7 +59,27 @@ typedef NS_ENUM(NSInteger,QMActionSourceType) {
 /**
  *  需要先登录再跳转
  */
-@property (nonatomic, copy) NSString *needlogin;
+@property (nonatomic, strong) NSDictionary *loginParam;
+
+/**
+ *  成功后跳转的url
+ */
+@property (nonatomic, copy) NSString *succUrl;
+
+/**
+ *  失败后跳转的url
+ */
+@property (nonatomic, copy) NSString *failUrl;
+
+/**
+ *  成功回调block
+ */
+@property (nonatomic, copy) QMActionPerformSuccessBlock succBlock;
+
+/**
+ *  失败回调block
+ */
+@property (nonatomic, copy) QMActionPerformFailBlock failBlock;
 
 /**
  *  跳转来源类型
@@ -79,16 +102,17 @@ typedef NS_ENUM(NSInteger,QMActionSourceType) {
  *  创建QMAction的工厂方法，建议使用该方法获取并初始化QMAction
  *
  *  @param type          action的类型
+ *  @param module        action操作模块
  *  @param content       action的参数
  *  @param jumpControl  控制跳转的视图控制器
  *
  *  @return QMAction的实例，可能是QMPushAction或其他子类
  */
-+ (instancetype)actionWithType:(QMActionType)type content:(NSString *)content jumpController:(UIViewController*)jumpControl;
++ (instancetype)actionWithType:(NSInteger)type module:(NSString*)module content:(NSString *)content jumpController:(UIViewController*)jumpControl;
 
-+ (instancetype)actionWithType:(QMActionType)type content:(NSString *)content;
++ (instancetype)actionWithType:(NSInteger)type module:(NSString*)module content:(NSString *)content;
 
-+ (instancetype)actionWithType:(QMActionType)type contentDict:(NSDictionary *)contentDict jumpController:(UIViewController*)jumpControl;
++ (instancetype)actionWithType:(NSInteger)type module:(NSString*)module contentDict:(NSDictionary *)contentDict jumpController:(UIViewController*)jumpControl;
 
 /**
  *  解析Url得到Action
@@ -108,12 +132,5 @@ typedef NS_ENUM(NSInteger,QMActionSourceType) {
  *  @param object 要填充的对象
  */
 - (void)setValuesForObject:(id)object;
-
-
-/**
- *  解析content，该方法在performAction:执行前调用，可避免后续过程中对content重复解析
- *
- */
-- (void)parseContent;
 
 @end
