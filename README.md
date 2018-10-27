@@ -6,27 +6,27 @@ QMAction
 =======
 调用url schema 
 ---------------
->NSString *actionUrl = @"beehome://device?type=0&content=%7b%22categoryId%22%3a5%2c%22deviceId%22%3a%22000c9b8e74010000000054c415b9c1a4%22%7d";
+ NSString *actionUrl = @"beehome://device?type=0&content=%7b%22categoryId%22%3a5%2c%22deviceId%22%3a%22000c9b8e74010000000054c415b9c1a4%22%7d";
 [[UIApplication sharedApplication] openURL:[NSURL URLWithString:actionUrl]];
 
 注：url的content参数用json形式包装，且做了UTF-8 encode，避免特殊字符影响解析。
 
 调用QMAction，参数从url中获取
 ------------------------
->QMAction *action = [QMAction actionFromUrl:@"beehome://device?type=0&content=%7b%22categoryId%22%3a5%2c%22deviceId%22%3a%22000c9b8e74010000000054c415b9c1a4%22%7d"];
+ QMAction *action = [QMAction actionFromUrl:@"beehome://device?type=0&content=%7b%22categoryId%22%3a5%2c%22deviceId%22%3a%22000c9b8e74010000000054c415b9c1a4%22%7d"];
 [[QMActionManager sharedManager] performAction:action];
 
 调用QMAction，参数从字典或content字符串中获取
 -----
->QMAction *action = [QMAction actionWithType:0 module:ACTION_MODULE_DEVICE contentDict:@{@"categoryId":@(5),@"deviceId":@"22000c9b8e74010000000054c415b9c1a4"} jumpController:self.navigationController];
+ QMAction *action = [QMAction actionWithType:0 module:ACTION_MODULE_DEVICE contentDict:@{@"categoryId":@(5),@"deviceId":@"22000c9b8e74010000000054c415b9c1a4"} jumpController:self.navigationController];
 [[QMActionManager sharedManager] performAction:action];
 
-QMAction *action = [QMAction actionWithType:0 module:ACTION_MODULE_DEVICE content:@"%7b%22categoryId%22%3a5%2c%22deviceId%22%3a%22000c9b8e74010000000054c415b9c1a4%22%7d" jumpController:self.navigationController];
+ QMAction *action = [QMAction actionWithType:0 module:ACTION_MODULE_DEVICE content:@"%7b%22categoryId%22%3a5%2c%22deviceId%22%3a%22000c9b8e74010000000054c415b9c1a4%22%7d" jumpController:self.navigationController];
 [[QMActionManager sharedManager] performAction:action];
 
 调用QMAction， 执行带有成功和失败的回调block的方法
 ---------
->QMAction *action = [QMAction actionFromUrl:url.absoluteString jumpController:jumpController];
+ QMAction *action = [QMAction actionFromUrl:url.absoluteString jumpController:jumpController];
  if ([[QMActionManager sharedManager] findClassForAction:action]) {
     [[QMActionManager sharedManager] performAction:action withSuccess:^(id target) {
     if (target) {
