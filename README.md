@@ -95,4 +95,4 @@ QMAction
 
 QMAction架构:
 
-![QMAction](/Users/luojin/Documents/project/QMAction/QMAction.png)
+![QMAction](QMAction.png)
